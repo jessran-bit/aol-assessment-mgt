@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MGT AoL Scoring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600&display=swap">
+<style>
+
+/* Layout: one working column; sticky tab bar; scoring grid scrolls sideways inside its own box */
+:root{
+  --bg:#f6f7f5; --surface:#ffffff; --fg:#1b241f; --muted:#5d6b63; --line:#d9dfdb;
+  --accent:#0b6b3a; --accent-soft:#e3f0e8; --accent-fg:#ffffff;
+  --good:#1d7a44; --good-soft:#e2f2e8; --warn:#9a5b00; --warn-soft:#fbefd9; --bad:#a3302a; --bad-soft:#f8e3e1;
+  --s1:#c9473e; --s2:#e19a3c; --s3:#9db86a; --s4:#4c9a6a; --s5:#1f6e4a;
+  --font-ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-head:"Source Serif 4",Georgia,serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121815; --surface:#19211d; --fg:#e4ebe6; --muted:#9aa9a0; --line:#2e3a34;
+  --accent:#5cc28a; --accent-soft:#1f3a2b; --accent-fg:#0d1a12;
+  --good:#6fd39a; --good-soft:#1c3628; --warn:#e8b45a; --warn-soft:#3a2d14; --bad:#f08a80; --bad-soft:#3d1f1c;
+  --s1:#e0675d; --s2:#e8a957; --s3:#b3cd7f; --s4:#62b382; --s5:#3f9a6c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121815; --surface:#19211d; --fg:#e4ebe6; --muted:#9aa9a0; --line:#2e3a34;
+  --accent:#5cc28a; --accent-soft:#1f3a2b; --accent-fg:#0d1a12;
+  --good:#6fd39a; --good-soft:#1c3628; --warn:#e8b45a; --warn-soft:#3a2d14; --bad:#f08a80; --bad-soft:#3d1f1c;
+  --s1:#e0675d; --s2:#e8a957; --s3:#b3cd7f; --s4:#62b382; --s5:#3f9a6c; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:14px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:18px}
+header.top{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:end;justify-content:space-between}
+h1{font-family:var(--font-head);font-weight:600;font-size:1.65rem;margin:0;text-wrap:balance}
+.eyebrow{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
+.sub{color:var(--muted);margin:2px 0 0;max-width:70ch}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:4px;border-bottom:1px solid var(--line);padding-top:6px;overflow-x:auto}
+nav.tabs button{font:inherit;font-weight:500;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:8px 12px;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:600;font-size:1.2rem;margin:0}
+h3{font-size:.95rem;margin:0;font-weight:600}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:12px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.muted{color:var(--muted)}
+.small{font-size:.82rem}
+label.f{display:grid;gap:3px;font-size:.78rem;color:var(--muted);font-weight:500}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+textarea{width:100%;min-height:110px;font-family:var(--font-mono);font-size:.82rem}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{font:inherit;font-weight:500;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:6px;padding:7px 12px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.link{border:0;background:none;padding:2px 4px;color:var(--muted);text-decoration:underline}
+.sections{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;display:grid;gap:2px;min-width:150px}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.chip b{font-family:var(--font-mono);font-weight:500}
+.prog{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent)}
+.pill{display:inline-block;font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.neutral{background:var(--accent-soft);color:var(--fg)}
+details.rub summary{cursor:pointer;font-weight:600}
+.rubgrid{display:grid;gap:10px;margin-top:10px}
+.trait{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:6px}
+.lv{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.lv div{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:.8rem;min-width:0}
+.lv div b{display:block;font-family:var(--font-mono);font-size:.75rem}
+.lv .k{background:var(--accent-soft)}
+@media (max-width:720px){.lv{grid-template-columns:1fr}}
+.scroller{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+thead th{font-size:.74rem;font-weight:600;color:var(--muted);background:var(--surface);position:sticky;top:0}
+th.obj{text-align:center;color:var(--fg);border-left:1px solid var(--line)}
+td.stu{position:sticky;left:0;background:var(--surface);min-width:190px;z-index:1}
+td.stu .id{font-family:var(--font-mono);font-size:.78rem;color:var(--muted)}
+td.sc{border-left:1px solid var(--line);white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-family:var(--font-mono);font-size:.8rem;width:28px;height:28px;border:0;border-left:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;padding:0}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{color:#fff;font-weight:600}
+.seg button[data-v="1"][aria-pressed="true"]{background:var(--s1)}
+.seg button[data-v="2"][aria-pressed="true"]{background:var(--s2)}
+.seg button[data-v="3"][aria-pressed="true"]{background:var(--s3);color:#1b241f}
+.seg button[data-v="4"][aria-pressed="true"]{background:var(--s4)}
+.seg button[data-v="5"][aria-pressed="true"]{background:var(--s5)}
+.na{color:var(--muted);font-size:.78rem}
+.done{color:var(--good);font-weight:600}
+.empty{border:1px dashed var(--line);border-radius:8px;padding:22px;text-align:center;color:var(--muted)}
+.res{display:grid;gap:14px}
+.objcard{display:grid;gap:10px}
+.objhead{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between}
+.objhead p{margin:0;max-width:80ch}
+.dist{display:flex;height:12px;border-radius:3px;overflow:hidden;min-width:120px;background:var(--line)}
+.dist span{display:block;height:100%}
+.copybox{font-family:var(--font-mono);font-size:.8rem;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px;white-space:pre-wrap;user-select:all}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:.85rem;z-index:20}
+.scale{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:start}
+.scale .n{font-family:var(--font-mono);font-weight:600;width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:#fff}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.warnbar{background:var(--warn-soft);color:var(--warn);border-radius:6px;padding:8px 12px;font-size:.85rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* v2 additions */
+.steps{display:grid;gap:14px}
+.step{display:grid;gap:8px}
+.step .lab{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.split{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.split{grid-template-columns:1fr}}
+.stulist{display:grid;gap:2px;max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:4px}
+.stulist button{font:inherit;text-align:left;border:0;background:none;color:var(--fg);padding:7px 9px;border-radius:6px;cursor:pointer;display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:center}
+.stulist button:hover{background:var(--bg)}
+.stulist button[aria-current="true"]{background:var(--accent-soft)}
+.stulist .nm{font-size:.86rem}
+.stulist .idn{grid-column:2;font-family:var(--font-mono);font-size:.74rem;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--muted);grid-row:span 2}
+.dot.part{background:var(--s2);border-color:var(--s2)}
+.dot.full{background:var(--good);border-color:var(--good)}
+.opts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+@media (max-width:900px){.opts{grid-template-columns:1fr}}
+.opt{font:inherit;text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:8px 9px;cursor:pointer;display:grid;gap:3px;align-content:start;font-size:.8rem;min-width:0}
+.opt b{font-family:var(--font-mono);font-size:.78rem}
+.opt:hover{border-color:var(--accent)}
+.opt[aria-pressed="true"]{border-width:2px;padding:7px 8px}
+.opt[data-v="1"][aria-pressed="true"]{border-color:var(--s1);background:var(--bad-soft)}
+.opt[data-v="2"][aria-pressed="true"]{border-color:var(--s2);background:var(--warn-soft)}
+.opt[data-v="3"][aria-pressed="true"],.opt[data-v="4"][aria-pressed="true"],.opt[data-v="5"][aria-pressed="true"]{border-color:var(--good);background:var(--good-soft)}
+.scorehead{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;align-items:baseline}
+.navbtns{display:flex;gap:8px;flex-wrap:wrap}
+.who{font-family:var(--font-mono);font-size:.85rem}
+.dropzone{border:1px dashed var(--line);border-radius:8px;padding:12px;display:grid;gap:8px;background:var(--bg)}
+.login{max-width:460px}
+body{margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">RVRCOB · AACSB Assurance of Learning · Table 5-1 data</p>
+      <h1>MGT AoL Scoring</h1>
+      <p class="sub">Choose your name, your class, then a student. Score each rubric trait from 1 to 5. Scores save as you click.</p>
+    </div>
+    <div class="row"><span class="small muted" id="savestate"></span><button class="btn link" id="signout" hidden>Change access code</button></div>
+  </header>
+
+  <form id="login" class="panel login" hidden>
+    <h2>Enter your access code</h2>
+    <p class="small muted" style="margin:0">The Program Coordinator gives this code to assigned faculty. Use Google Chrome, signed in to your DLSU Google account.</p>
+    <label class="f" for="code">Access code<input id="code" type="password" autocomplete="current-password" required></label>
+    <div class="row"><button class="btn primary" type="submit">Continue</button><span class="small" id="login-msg"></span></div>
+  </form>
+
+  <nav class="tabs" role="tablist" id="tabs" hidden>
+    <button role="tab" aria-selected="true" data-tab="score">Score students</button>
+    <button role="tab" aria-selected="false" data-tab="results" data-admin hidden>Results for Table 5-1</button>
+    <button role="tab" aria-selected="false" data-tab="classes" data-admin hidden>Manage classes</button>
+    <button role="tab" aria-selected="false" data-tab="guide">Scale and how-to</button>
+  </nav>
+
+  <div id="status" class="warnbar" hidden></div>
+
+  <!-- SCORE -->
+  <section id="view-score" class="res" hidden>
+    <div class="panel steps">
+      <div class="step">
+        <span class="lab">1 · Your name</span>
+        <div class="row"><select id="pick-faculty" aria-label="Your name"><option value="">Choose your name</option></select></div>
+      </div>
+      <div class="step" id="step-class" hidden>
+        <span class="lab">2 · Your class</span>
+        <div id="pick-class" class="sections"></div>
+      </div>
+    </div>
+    <div id="score-area"></div>
+  </section>
+
+  <!-- RESULTS (admin) -->
+  <section id="view-results" class="res" hidden>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <label class="f">Program<select id="rf-program"><option value="MGT">BS Business Management (MGT)</option><option value="MGTBAS">MGT-BAS</option></select></label>
+          <label class="f">Term<select id="rf-term"><option value="">All terms</option></select></label>
+        </div>
+        <div class="row">
+          <button class="btn" id="dl-summary">Download summary (CSV)</button>
+          <button class="btn" id="dl-raw">Download all scores (CSV)</button>
+        </div>
+      </div>
+      <p class="small muted" style="margin:0">A student meets expectations on a trait when scored 3 or higher. Target: 80% of students meet or exceed expectations on each trait.</p>
+    </div>
+    <div id="results"></div>
+    <div class="panel">
+      <h2>Scoring progress by class</h2>
+      <div class="scroller"><table><thead><tr><th>Course</th><th>Section</th><th>Faculty</th><th>Term</th><th>Students</th><th>Fully scored</th><th></th></tr></thead><tbody id="progress"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- CLASSES (admin) -->
+  <section id="view-classes" class="res" hidden>
+    <form id="new-form" class="panel">
+      <h2>Add a class</h2>
+      <div class="row">
+        <label class="f">Course (AoL point)<select id="nf-course"></select></label>
+        <label class="f">Section<input id="nf-section" placeholder="e.g., C01" required maxlength="12" size="8"></label>
+        <label class="f">Term<select id="nf-term"></select></label>
+        <label class="f">Assigned faculty<input id="nf-faculty" placeholder="Full name" required maxlength="80" size="24" list="faculty-list"></label>
+        <label class="f">Default program<select id="nf-program"><option value="MGT">MGT</option><option value="MGTBAS">MGT-BAS</option></select></label>
+      </div>
+      <datalist id="faculty-list"></datalist>
+      <p class="small muted" id="nf-measures" style="margin:0"></p>
+      <div class="dropzone">
+        <label class="f" for="nf-file">Class list: upload the Canvas gradebook export (CSV). Only the student name and SIS User ID (ID number) are kept.</label>
+        <input type="file" id="nf-file" accept=".csv,text/csv">
+        <label class="f" for="nf-paste">Or paste one student per line: ID number, then name. Add MGT-BAS at the end of a line for MGT-BAS students.</label>
+        <textarea id="nf-paste" placeholder="12327476, ADRIANO, ANDREA GABRIELLE&#10;12327042	AGUAS, ERROL PATRICK	MGT-BAS"></textarea>
+        <span class="small muted" id="nf-preview"></span>
+      </div>
+      <div class="row"><button class="btn primary" type="submit" id="nf-submit">Create class</button></div>
+    </form>
+    <div class="panel">
+      <h2>Classes</h2>
+      <div id="class-admin"></div>
+    </div>
+  </section>
+
+  <!-- GUIDE -->
+  <section id="view-guide" class="res" hidden>
+    <div class="panel">
+      <h2>Five-point rubric scale</h2>
+      <p class="muted" style="margin:0;max-width:70ch">Each trait keeps its three written descriptors. Levels 4 and 2 sit between them.</p>
+      <div class="scale" id="scale"></div>
+      <p class="small muted" style="margin:0">For Table 5-1, levels 3, 4 and 5 count as "meets or exceeds expectations".</p>
+    </div>
+    <div class="panel">
+      <h2>How to score</h2>
+      <ol style="margin:0;padding-left:20px;display:grid;gap:6px;max-width:75ch">
+        <li>On <b>Score students</b>, choose your name, then your class.</li>
+        <li>Pick a student from the list. Read each trait's descriptors and click the level that matches the student's work.</li>
+        <li>Scores save as you click. Click a chosen level again to clear it.</li>
+        <li>Use <b>Next student</b> to move down the list. A green dot means every trait is scored; orange means partly scored.</li>
+        <li>Score each student's own work. For group outputs, score the section the student wrote or the individual evaluation, not the group grade.</li>
+        <li>Wait until the top of the page says "All changes saved" before closing it.</li>
+        <li>When the class is done, download the <b>Class scoring sheet</b> (all students on one table) and the <b>individual rubric sheets</b> (one page per student), sign them, and send them to the Program Coordinator.</li>
+      </ol>
+      <p class="small muted" style="margin:0">If your class or name is missing, contact the Program Coordinator.</p>
+    </div>
+  </section>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+/* ===== CONFIG: paste your Apps Script web app URL here (ends with /exec) ===== */
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+/* ========================================================================== */
+const RUBRIC = {"1.1": {"goal": "Technically Proficient Professional", "text": "Apply functional business concepts across key domains, including accounting, finance, marketing, analytics, and operations, to solve complex real-world organizational challenges.", "plo": "PLO1", "traits": [{"name": "Functional knowledge", "ex": "Uses concepts from each functional area (accounting, finance, marketing, analytics, operations) accurately and precisely.", "me": "Uses concepts correctly with minor errors.", "be": "Makes frequent conceptual errors."}, {"name": "Cross-functional integration", "ex": "Seamlessly connects insights across functions into a unified analysis.", "me": "Meaningfully connects at least two functions.", "be": "Treats functions in isolation."}, {"name": "Application", "ex": "Applies integrated knowledge to produce well-grounded, actionable solutions to complex real-world challenges.", "me": "Applies knowledge appropriately to the business situation.", "be": "Application is minimal or flawed."}]}, "1.2": {"goal": "Technically Proficient Professional", "text": "Apply business intelligence techniques, including analytical modeling and industry-standard analytics tools, to support decision-making across various enterprise business functions.", "plo": "PLO7", "traits": [{"name": "Analytical modeling", "ex": "Selects and applies the most appropriate analytical modeling techniques correctly and insightfully.", "me": "Applies appropriate modeling techniques with minor errors.", "be": "Techniques are inappropriate or misapplied."}, {"name": "Enterprise data understanding", "ex": "Thoroughly accounts for departmental functions and data access constraints in the analysis.", "me": "Accounts for key functions and constraints with minor gaps.", "be": "Ignores enterprise functions or data constraints."}, {"name": "Analytics tool proficiency", "ex": "Uses analytics tools fluently to deliver outputs that clearly support business functions.", "me": "Uses analytics tools adequately with minor inefficiencies.", "be": "Tool use is weak or outputs are unusable."}]}, "2.1": {"goal": "Culturally Sensitive Critical and Creative Thinkers", "text": "Formulate innovative, evidence-based business strategies by critically analyzing organizational data, assumptions, and environments using quantitative and qualitative decision tools.", "plo": "PLO2", "traits": [{"name": "Situation and data analysis", "ex": "Rigorously analyzes organizational data, underlying assumptions, and the internal/external environment, surfacing critical, well-evidenced insights.", "me": "Analyzes key data, assumptions, and environmental factors adequately.", "be": "Analysis is superficial, ignores key assumptions, or omits the environment."}, {"name": "Use of decision tools", "ex": "Selects the most appropriate quantitative/qualitative decision tools and applies them correctly and insightfully.", "me": "Applies appropriate tools with minor errors.", "be": "Uses inappropriate tools or applies them incorrectly."}, {"name": "Strategy formulation", "ex": "Formulates innovative, evidence-based strategies that flow logically from the analysis and address key issues.", "me": "Strategies are reasonable and generally consistent with the analysis.", "be": "Strategies are disconnected from the analysis, generic, or unsupported by evidence."}]}, "3.1": {"goal": "Virtue-Guided Decision-Maker", "text": "Evaluate business decisions through ethical frameworks, legal requirements, and values of kagandahang-loob and pakikipagkapwa-tao to ensure accountability and long-term societal well-being.", "plo": "PLO3", "traits": [{"name": "Ethical and legal analysis", "ex": "Accurately identifies the ethical issues and applicable legal/regulatory requirements and analyzes them rigorously.", "me": "Identifies the main ethical issues and key legal/regulatory requirements with adequate analysis.", "be": "Overlooks significant ethical issues or applicable requirements."}, {"name": "Stakeholder identification and societal well-being", "ex": "Identifies all significantly affected stakeholders, including those beyond the immediate organization, and articulates implications for long-term societal well-being.", "me": "Identifies the key affected stakeholders and their main interests, with some attention to societal well-being.", "be": "Considers only the immediate organization, misidentifies stakeholders, or ignores societal implications."}, {"name": "Values-grounded tradeoff justification", "ex": "Defends the decision with a clear, well-reasoned weighing of ethical/legal standards and stakeholder interests, explicitly and convincingly grounded in the values of kagandahang-loob and pakikipagkapwa-tao.", "me": "Provides a reasonable justification for the tradeoffs made, with adequate grounding in these values.", "be": "Justification is missing, one-sided, unreasoned, or disregards these values."}]}, "4.1": {"goal": "Engaged and Service-Driven Citizen", "text": "Exemplify Lasallian business leadership by driving sustainable, humanistic business initiatives that create inclusive value for stakeholders, particularly the poor and marginalized.", "plo": "PLO4", "traits": [{"name": "Stakeholder and common-good orientation", "ex": "Thoroughly considers impacts on all stakeholders and society, with explicit, substantive attention to the poor and marginalized.", "me": "Considers key stakeholders beyond the firm, including some attention to underserved or marginalized groups.", "be": "Focuses only on firm interests or omits marginalized stakeholders."}, {"name": "Sustainability integration", "ex": "Comprehensively integrates economic, social, and environmental dimensions.", "me": "Adequately addresses at least two sustainability dimensions.", "be": "Sustainability considerations are absent or token."}, {"name": "Lasallian leadership and values grounding", "ex": "Initiative is explicitly and convincingly grounded in Lasallian values and exemplifies humanistic business leadership that creates inclusive value for stakeholders.", "me": "Initiative shows adequate grounding in Lasallian values and leadership.", "be": "Initiative shows little or no values grounding or leadership."}]}, "5.1": {"goal": "Effective Communicator", "text": "Communicate complex business insights clearly and persuasively across diverse physical and digital platforms, exercising inclusive, culturally sensitive dialogue with internal and external stakeholders.", "plo": "PLO5", "traits": [{"name": "Content and insight", "ex": "Insights are accurate, relevant, and reflect the latest developments in the field.", "me": "Insights are mostly accurate and relevant, with minor omissions.", "be": "Insights are inaccurate, outdated, or irrelevant."}, {"name": "Organization and platform adaptation", "ex": "Logically structured and effectively adapted across physical and digital communication platforms.", "me": "Discernible structure with minor lapses in platform adaptation.", "be": "Lacks clear structure or fails to adapt to the platform."}, {"name": "Inclusive, culturally sensitive delivery", "ex": "Communicates fluently and persuasively in English/Filipino, with polished, inclusive, and culturally sensitive dialogue with internal and external stakeholders.", "me": "Communicates clearly with minor lapses in inclusivity or cultural sensitivity.", "be": "Frequent errors, insensitivity, or exclusionary language impede understanding or stakeholder engagement."}]}, "5.2": {"goal": "Effective Communicator", "text": "Apply data management principles to communicate data analysis findings to organizational stakeholders.", "plo": "PLO8", "traits": [{"name": "Clarity of findings", "ex": "Findings are presented accurately and clearly, tailored to the audience, with insightful interpretation.", "me": "Findings are presented accurately with minor lapses in clarity.", "be": "Findings are inaccurate, unclear, or confusing."}, {"name": "Data management grounding", "ex": "Analysis reflects rigorous application of data management principles (quality, structure, access, governance).", "me": "Applies key data management principles with minor gaps.", "be": "Disregards basic data management principles."}, {"name": "Stakeholder engagement", "ex": "Engages confidently in business discussions, addressing stakeholder questions with well-supported responses.", "me": "Engages adequately and answers most questions.", "be": "Engagement is minimal or responses are unsupported."}]}, "6.1": {"goal": "Reflective Lifelong Learner and Competent Self-Nurturer", "text": "Integrate digital capabilities and emerging technologies responsibly into personal and professional practices for navigating dynamic global business environments.", "plo": "PLO6", "traits": [{"name": "Innovativeness", "ex": "Solution is original and offers a novel approach to the challenge.", "me": "Solution shows some originality beyond standard practice.", "be": "Solution merely replicates existing approaches."}, {"name": "Responsible technology application", "ex": "Leverages current and emerging technology effectively, appropriately, and responsibly (e.g., data privacy, ethical use) throughout.", "me": "Uses appropriate technology with minor gaps in responsible application.", "be": "Technology use is minimal, inappropriate, or applied irresponsibly."}, {"name": "Global business navigation", "ex": "Solution clearly demonstrates viability and adaptability for navigating dynamic global business environments.", "me": "Solution is generally viable with identifiable relevance to global business contexts.", "be": "Solution is not viable or shows no relevance to global business contexts."}]}};
+const COURSES = {
+  SYSTHEO:{MGT:["3.1","6.1"],MGTBAS:["3.1","6.1"],artifact:"Consulting case: decision justification section (3.1); Digital Capabilities and Emerging Technology section (6.1)"},
+  PROJECM:{MGT:["2.1"],MGTBAS:["2.1"],artifact:"Project Management Portfolio: Strategic Analysis and Decision Tools section (individually authored)"},
+  THSBUS2:{MGT:["5.1"],MGTBAS:["5.1","5.2"],artifact:"Written thesis and oral defense (5.1); Data Analysis Findings and Data Management section (5.2, MGT-BAS only)"},
+  PRCMPRJ:{MGT:["4.1"],artifact:"Client project output: Common Good, Sustainability, and Lasallian Leadership section"},
+  PRCBPRJ:{MGTBAS:["1.2","4.1"],artifact:"Client analytics deliverable (1.2); Common Good, Sustainability, and Lasallian Leadership section (4.1)"},
+  PRCMOJT:{MGT:["1.1"],artifact:"Company supervisor evaluation of the individual student"},
+  PRCBOJT:{MGTBAS:["1.1"],artifact:"Company supervisor evaluation of the individual student"}
+};
+const TERMS = ["Term 3, AY 2025-2026","Term 1, AY 2026-2027","Term 2, AY 2026-2027","Term 3, AY 2026-2027"];
+const PROGS = {MGT:"MGT", MGTBAS:"MGT-BAS"};
+const LEVELS = [
+  {v:5,name:"Exceeds expectations",use:"ex"},
+  {v:4,name:"Above expectations",use:null,txt:"Fully meets the level 3 descriptor and shows several qualities of level 5."},
+  {v:3,name:"Meets expectations",use:"me"},
+  {v:2,name:"Approaching expectations",use:null,txt:"Shows some qualities of level 3 but falls short on important elements."},
+  {v:1,name:"Below expectations",use:"be"}
+];
+const TARGET=0.8, MEET=3;
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const key=(o,t)=>o+"-T"+(t+1);
+const objsFor=(course,prog)=>(COURSES[course]&&COURSES[course][prog])||[];
+const courseObjs=course=>{const c=COURSES[course];return [...new Set([...(c.MGT||[]),...(c.MGTBAS||[])])].sort();};
+const lvl=v=>LEVELS.find(l=>l.v===v);
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2400);}
+function setStatus(m){const s=$("#status");s.textContent=m||"";s.hidden=!m;}
+function store(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch(e){}}
+function recall(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+
+let accessCode=recall("aol-code")||"", isAdmin=false, canWrite=true, pendingWrites=0;
+let sections=[], students=[];
+let state={faculty:recall("aol-faculty")||"", sectionId:recall("aol-section")||"", studentId:null};
+let pendingDeleteClass=null, rosterDraft=[];
+
+/* ---------- API ---------- */
+/* Calls Google through a script tag (JSONP). This works whether the Apps Script web app
+   is shared with "Anyone" or only with your university's Google accounts. */
+let cbSeq=0;
+function api(action,payload={}){
+  return new Promise((resolve,reject)=>{
+    const cb="aolcb_"+Date.now().toString(36)+"_"+(cbSeq++);
+    const tag=document.createElement("script");
+    const done=()=>{ clearTimeout(timer); delete window[cb]; tag.remove(); };
+    const timer=setTimeout(()=>{ done(); const e=new Error("network"); e.code="network"; reject(e); },45000);
+    window[cb]=data=>{ done(); if(data&&data.error){ const e=new Error(data.error); e.code=data.error; reject(e); } else resolve(data); };
+    tag.onerror=()=>{ done(); const e=new Error("network"); e.code="network"; reject(e); };
+    /* Loaded but our callback never ran: Google answered with something else
+       (old Code.gs still deployed, or a Google sign-in page). */
+    tag.onload=()=>setTimeout(()=>{ if(window[cb]){ done(); const e=new Error("wrong_reply"); e.code="wrong_reply"; reject(e); } },1500);
+    tag.src=API_URL+(API_URL.includes("?")?"&":"?")+"callback="+cb+"&payload="+encodeURIComponent(JSON.stringify({...payload,action,key:accessCode}));
+    document.head.appendChild(tag);
+  });
+}
+function setSave(){ $("#savestate").textContent = pendingWrites ? "Saving..." : (lastSaved ? "All changes saved" : ""); }
+let lastSaved=false;
+
+/* ---------- tabs ---------- */
+function showTab(t){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
+  ["score","results","classes","guide"].forEach(v=>$("#view-"+v).hidden=v!==t);
+  if(t==="results") renderResults();
+  if(t==="classes") renderClassAdmin();
+}
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+
+
+/* ---------- static bits ---------- */
+$("#scale").innerHTML=LEVELS.map(l=>`<div class="n" style="background:var(--s${l.v})">${l.v}</div><div><b>${l.name}</b><br><span class="muted small">${l.use?{ex:"Matches the trait's Exceeds Expectations descriptor.",me:"Matches the trait's Meets Expectations descriptor.",be:"Matches the trait's Below Expectations descriptor."}[l.use]:l.txt}</span></div>`).join("");
+$("#nf-course").innerHTML=Object.keys(COURSES).map(c=>`<option>${c}</option>`).join("");
+$("#nf-term").innerHTML=TERMS.map(t=>`<option ${t==="Term 1, AY 2026-2027"?"selected":""}>${t}</option>`).join("");
+$("#rf-term").innerHTML+=TERMS.map(t=>`<option>${t}</option>`).join("");
+
+/* ---------- helpers on data ---------- */
+const studentsOf=sid=>students.filter(s=>s.sectionId===sid).sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+function scoredCount(st,course){const sc=st.scores||{};let n=0,t=0;objsFor(course,st.program).forEach(o=>RUBRIC[o].traits.forEach((_,i)=>{t++;if(sc[key(o,i)])n++;}));return {n,t};}
+function isComplete(st,course){const c=scoredCount(st,course);return c.t>0&&c.n===c.t;}
+const facultyNames=()=>[...new Set(sections.map(s=>(s.faculty||"").trim()).filter(Boolean))].sort();
+
+/* ---------- SCORE flow ---------- */
+function renderPickers(){
+  const names=facultyNames();
+  const sel=$("#pick-faculty");
+  sel.innerHTML=`<option value="">${names.length?"Choose your name":"No classes set up yet"}</option>`+names.map(n=>`<option ${n===state.faculty?"selected":""}>${esc(n)}</option>`).join("");
+  $("#faculty-list").innerHTML=names.map(n=>`<option value="${esc(n)}">`).join("");
+  if(state.faculty && !names.includes(state.faculty) && sections.length){ state.faculty=""; store("aol-faculty",null); }
+  const mine=sections.filter(s=>s.faculty===state.faculty).sort((a,b)=>(a.course+a.section).localeCompare(b.course+b.section));
+  $("#step-class").hidden=!state.faculty;
+  if(mine.length===1 && !mine.some(s=>s.id===state.sectionId)) state.sectionId=mine[0].id;
+  $("#pick-class").innerHTML=mine.map(s=>{const st=studentsOf(s.id),d=st.filter(x=>isComplete(x,s.course)).length,p=pct(d,st.length);
+    return `<button class="chip" data-id="${esc(s.id)}" aria-pressed="${s.id===state.sectionId}"><span><b>${esc(s.course)}</b> ${esc(s.section)}</span><span class="small muted">${esc(s.term)}</span><span class="small">${d} of ${st.length} scored</span><span class="prog"><i style="width:${p}%"></i></span></button>`;}).join("")||`<span class="muted small">No classes are assigned to this name.</span>`;
+  $("#pick-class").querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{state.sectionId=b.dataset.id;state.studentId=null;store("aol-section",state.sectionId);renderPickers();renderScore();}));
+}
+$("#pick-faculty").addEventListener("change",e=>{state.faculty=e.target.value;state.sectionId="";state.studentId=null;store("aol-faculty",state.faculty||null);renderPickers();renderScore();});
+
+function renderScore(){
+  const area=$("#score-area");
+  const s=sections.find(x=>x.id===state.sectionId && x.faculty===state.faculty);
+  if(!state.faculty){ area.innerHTML=sections.length?`<div class="empty">Choose your name to see your classes.</div>`:`<div class="empty">Classes appear here once the Program Coordinator sets them up.</div>`; return; }
+  if(!s){ area.innerHTML=`<div class="empty">Choose a class above.</div>`; return; }
+  const st=studentsOf(s.id);
+  if(!st.length){ area.innerHTML=`<div class="empty">This class has no students yet. Contact the Program Coordinator.</div>`; return; }
+  if(!st.some(x=>x.id===state.studentId)){ state.studentId=(st.find(x=>!isComplete(x,s.course))||st[0]).id; }
+  const cur=st.find(x=>x.id===state.studentId), idx=st.indexOf(cur);
+  const done=st.filter(x=>isComplete(x,s.course)).length;
+  const filter=($("#stu-filter")?.value||"");
+  const list=st.filter(x=>!filter||(x.name+" "+x.idNo).toLowerCase().includes(filter.toLowerCase()));
+  const objs=objsFor(s.course,cur.program), sc=cur.scores||{};
+  area.innerHTML=`
+  <div class="split">
+    <div class="res" style="gap:8px">
+      <div class="row" style="justify-content:space-between"><span class="lab small muted" style="font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:.72rem">3 · Student</span><span class="pill ${done===st.length?'good':'neutral'}">${done} of ${st.length} done</span></div>
+      <input id="stu-filter" placeholder="Find by name or ID" value="${esc(filter)}" aria-label="Find student">
+      <div class="stulist" id="stulist">${list.map(x=>{const c=scoredCount(x,s.course);return `<button data-id="${esc(x.id)}" aria-current="${x.id===cur.id}"><span class="dot ${c.n===0?'':c.n===c.t?'full':'part'}"></span><span class="nm">${esc(x.name)}</span><span class="idn">${esc(x.idNo)} · ${PROGS[x.program]}</span></button>`;}).join("")}</div>
+      <div class="res" style="gap:6px"><span class="small muted">Downloads for this class</span>
+      <button class="btn" id="btn-classsheet">Class scoring sheet (Word)</button>
+      <button class="btn" id="btn-evidence">All individual rubric sheets (Word)</button></div>
+    </div>
+    <div class="panel" style="gap:16px">
+      <div class="scorehead">
+        <div><p class="eyebrow">${esc(s.course)} ${esc(s.section)} · ${esc(s.term)} · Student ${idx+1} of ${st.length}</p><h2>${esc(cur.name)}</h2><span class="who">${esc(cur.idNo)} · ${PROGS[cur.program]}</span></div>
+        <div class="navbtns"><button class="btn" id="btn-one">This student's sheet</button><button class="btn" id="prev" ${idx===0?'disabled':''}>Previous</button><button class="btn primary" id="next" ${idx===st.length-1?'disabled':''}>Next student</button></div>
+      </div>
+      <p class="small muted" style="margin:0">Artifact: ${esc(COURSES[s.course].artifact)}</p>
+      ${objs.map(o=>{const R=RUBRIC[o];return `<div class="res" style="gap:10px"><div><h3>Objective ${o} · ${esc(R.goal)} <span class="muted small">(${esc(R.plo)})</span></h3><p class="small muted" style="margin:2px 0 0">${esc(R.text)}</p></div>
+        ${R.traits.map((t,i)=>{const k=key(o,i),v=sc[k];return `<div class="trait"><div class="row" style="justify-content:space-between"><b>Trait ${i+1}: ${esc(t.name)}</b>${v?`<span class="pill ${v>=MEET?'good':'bad'}">${v} · ${lvl(v).name}</span>`:`<span class="pill warn">Not scored</span>`}</div>
+          <div class="opts" role="group" aria-label="${esc(t.name)}">${LEVELS.map(l=>`<button class="opt" data-k="${k}" data-v="${l.v}" aria-pressed="${v===l.v}"><b>${l.v} · ${l.name}</b><span>${esc(l.use?t[l.use]:l.txt)}</span></button>`).join("")}</div></div>`;}).join("")}</div>`;}).join("")}
+      <div class="navbtns" style="justify-content:flex-end"><button class="btn primary" id="next2" ${idx===st.length-1?'disabled':''}>Next student</button></div>
+    </div>
+  </div>`;
+  const go=d=>{state.studentId=st[idx+d].id;renderScore();$("#score-area").scrollIntoView({block:"start"});};
+  $("#prev").addEventListener("click",()=>go(-1));
+  $("#next").addEventListener("click",()=>go(1)); $("#next2").addEventListener("click",()=>go(1));
+  $("#stulist").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{state.studentId=b.dataset.id;renderScore();}));
+  $("#stu-filter").addEventListener("input",()=>{const pos=$("#stu-filter").selectionStart;renderScore();const f=$("#stu-filter");f.focus();f.setSelectionRange(pos,pos);});
+  area.querySelectorAll(".opt").forEach(b=>b.addEventListener("click",()=>setScore(cur.id,b.dataset.k,+b.dataset.v)));
+  $("#btn-evidence").addEventListener("click",()=>downloadEvidence(s));
+  $("#btn-classsheet").addEventListener("click",()=>downloadClassSheet(s));
+  $("#btn-one").addEventListener("click",()=>downloadEvidence(s,cur.id));
+  if(!canWrite) area.querySelectorAll(".opt").forEach(b=>b.disabled=true);
+}
+
+/* ---------- writes ---------- */
+const writing={};
+async function setScore(id,k,v){
+  const x=students.find(s=>s.id===id); if(!x) return;
+  const scores={...(x.scores||{})}; if(scores[k]===v) delete scores[k]; else scores[k]=v;
+  x.scores=scores; renderScore(); renderPickers();
+  queueScore(id,k);
+}
+const scoreQ={};
+async function queueScore(id,k){
+  const qk=id+"|"+k;
+  if(scoreQ[qk]){ scoreQ[qk].again=true; return; }
+  scoreQ[qk]={again:false}; pendingWrites++; setSave();
+  try{
+    do{ scoreQ[qk].again=false; const x=students.find(s=>s.id===id); if(!x) break;
+        const v=(x.scores||{})[k]??null;
+        await api("score",{id,k,v,by:state.faculty||"Program Coordinator"}); lastSaved=true;
+    }while(scoreQ[qk].again);
+  }catch(e){ handleWriteError(e); }
+  delete scoreQ[qk]; pendingWrites--; setSave();
+}
+
+function handleWriteError(e){
+  if(e&&e.code==="bad_key"){ setStatus("Your access code is no longer valid. Enter the new code."); showLogin(); }
+  else if(e&&e.code==="not_allowed") toast("Only the Program Coordinator can do that.");
+  else { toast("Could not save. Check your connection and try again."); setStatus("Some changes did not save. Reload the page to see what is stored, then redo the last scores."); }
+}
+
+/* ---------- CLASS ADMIN ---------- */
+function parseCSV(text){const rows=[];let row=[],f="",q=false;for(let i=0;i<text.length;i++){const c=text[i];if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}else if(c==='"')q=true;else if(c===','){row.push(f);f="";}else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f="";}else f+=c;}if(f||row.length){row.push(f);rows.push(row);}return rows;}
+function fromCanvas(text){
+  const rows=parseCSV(text.replace(/^﻿/,"")); if(!rows.length) return [];
+  const h=rows[0].map(x=>x.trim()); const iN=h.indexOf("Student"), iS=h.indexOf("SIS User ID");
+  if(iN<0||iS<0) return null;
+  return rows.slice(1).map(r=>({name:(r[iN]||"").trim(),idNo:(r[iS]||"").trim()})).filter(r=>r.name&&r.idNo&&!/^points possible/i.test(r.name)&&!/^student, test$/i.test(r.name));
+}
+function fromPaste(text,defProg){
+  return text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(line=>{
+    let parts=line.split(/\t/); if(parts.length<2) parts=line.split(/,(.+)/s).filter(Boolean);
+    parts=parts.map(p=>p.trim()).filter(Boolean); if(parts.length<2) return null;
+    let idNo=parts[0], name=parts.slice(1).join(", "), program=defProg;
+    const m=name.match(/[,\s]+(MGT-?BAS|MGT)\s*$/i); if(m){program=/BAS/i.test(m[1])?"MGTBAS":"MGT";name=name.slice(0,m.index).trim();}
+    return {idNo,name,program};
+  }).filter(Boolean);
+}
+function updateMeasures(){
+  const c=$("#nf-course").value;
+  const progNote=o=>{const inM=(COURSES[c].MGT||[]).includes(o),inB=(COURSES[c].MGTBAS||[]).includes(o);return inM&&inB?"":(inB?" (MGT-BAS students only)":" (MGT students only)");};
+  $("#nf-measures").innerHTML=`<b>${esc(c)} is scored on:</b> ${esc(COURSES[c].artifact)}<br>`+courseObjs(c).map(o=>`Objective ${o} (${esc(RUBRIC[o].plo)})${progNote(o)}: `+RUBRIC[o].traits.map((t,i)=>`T${i+1} ${esc(t.name)}`).join("; ")).join("<br>");
+  const only=COURSES[c].MGT?(COURSES[c].MGTBAS?null:"MGT"):"MGTBAS"; if(only) $("#nf-program").value=only; $("#nf-program").disabled=!!only;
+}
+$("#nf-course").addEventListener("change",updateMeasures); updateMeasures();
+$("#nf-file").addEventListener("change",async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const list=fromCanvas(await f.text());
+  if(list===null){ rosterDraft=[]; $("#nf-preview").textContent="This file has no Student and SIS User ID columns. Use the Canvas gradebook export, or paste the list instead."; return; }
+  rosterDraft=list.map(x=>({...x,program:$("#nf-program").value}));
+  $("#nf-preview").textContent=`${rosterDraft.length} students read from ${f.name}. Only names and ID numbers are kept.`;
+  const sec=(f.name.match(/_([A-Z]\d{2,3}|[A-Z]{1,2}\d{1,2})\.csv$/i)||[])[1]; if(sec && !$("#nf-section").value) $("#nf-section").value=sec.toUpperCase();
+  const crs=Object.keys(COURSES).find(c=>f.name.toUpperCase().includes(c)); if(crs){$("#nf-course").value=crs;updateMeasures();}
+});
+$("#nf-paste").addEventListener("input",()=>{ const l=fromPaste($("#nf-paste").value,$("#nf-program").value); $("#nf-preview").textContent=l.length?`${l.length} students in the pasted list.`:""; });
+$("#new-form").addEventListener("submit",async e=>{
+  e.preventDefault(); if(!isAdmin) return;
+  const course=$("#nf-course").value, section=$("#nf-section").value.trim().toUpperCase(), term=$("#nf-term").value, faculty=$("#nf-faculty").value.trim().replace(/\s+/g," "), program=$("#nf-program").value;
+  const pasted=fromPaste($("#nf-paste").value,program);
+  const roster=[...rosterDraft,...pasted].map(x=>({...x,program:objsFor(course,x.program).length?x.program:(COURSES[course].MGT?"MGT":"MGTBAS")}));
+  $("#nf-submit").disabled=true; $("#nf-submit").textContent="Saving...";
+  try{
+    let created=false, added=0;
+    for(let i=0;i===0||i<roster.length;i+=15){
+      $("#nf-submit").textContent=`Saving ${Math.min(i+15,roster.length)} of ${roster.length}...`;
+      const r=await api("addClass",{section:{course,section,term,faculty,program},roster:roster.slice(i,i+15)});
+      created=created||r.created; added+=r.added;
+    }
+    toast(created?`Created ${course} ${section} with ${added} students.`:`Class already existed. Added ${added} new students.`);
+    await refresh();
+    rosterDraft=[]; $("#nf-file").value=""; $("#nf-paste").value=""; $("#nf-section").value=""; $("#nf-preview").textContent="";
+  }catch(err){ handleWriteError(err); }
+  $("#nf-submit").disabled=false; $("#nf-submit").textContent="Create class";
+});
+function renderClassAdmin(){
+  const box=$("#class-admin");
+  if(!sections.length){ box.innerHTML=`<div class="empty">No classes yet. Add the first class above.</div>`; return; }
+  box.innerHTML=sections.slice().sort((a,b)=>(a.course+a.section).localeCompare(b.course+b.section)).map(s=>{
+    const st=studentsOf(s.id), both=COURSES[s.course].MGT&&COURSES[s.course].MGTBAS;
+    return `<details class="trait" data-sid="${esc(s.id)}"><summary><b>${esc(s.course)} ${esc(s.section)}</b> · ${esc(s.term)} · ${esc(s.faculty)} · ${st.length} students</summary>
+      <div class="res" style="gap:10px;margin-top:10px">
+        <div class="row"><label class="f">Assigned faculty<input class="fac-edit" value="${esc(s.faculty)}" list="faculty-list" size="24" id="fac-${esc(s.id)}"></label><button class="btn fac-save">Save faculty</button>
+        ${pendingDeleteClass===s.id?`<span class="small">Delete this class and all its scores?</span><button class="btn danger del-yes">Delete</button><button class="btn del-no">Keep</button>`:`<button class="btn danger del-class">Delete class</button>`}</div>
+        <div class="scroller"><table><thead><tr><th>ID number</th><th>Name</th><th>Program</th><th>Traits scored</th><th></th></tr></thead><tbody>
+        ${st.map(x=>{const c=scoredCount(x,s.course);return `<tr data-id="${esc(x.id)}"><td class="who">${esc(x.idNo)}</td><td>${esc(x.name)}</td><td>${both?`<select class="progsel" id="pg-${esc(x.id)}">${Object.entries(PROGS).map(([k,v])=>`<option value="${k}" ${x.program===k?'selected':''}>${v}</option>`).join("")}</select>`:PROGS[x.program]}</td><td>${c.n} of ${c.t}</td><td><button class="btn link rm">Remove</button></td></tr>`;}).join("")}
+        </tbody></table></div>
+      </div></details>`;}).join("");
+  box.querySelectorAll("details").forEach(d=>{
+    const sid=d.dataset.sid; if(openAdmin.has(sid)) d.open=true;
+    d.addEventListener("toggle",()=>{d.open?openAdmin.add(sid):openAdmin.delete(sid);});
+    d.querySelector(".fac-save").addEventListener("click",async()=>{const v=d.querySelector(".fac-edit").value.trim().replace(/\s+/g," ");if(!v)return;const s=sections.find(x=>x.id===sid);try{await api("updateSection",{id:sid,faculty:v});s.faculty=v;toast("Faculty saved");renderAll();}catch(e){handleWriteError(e);}});
+    d.querySelector(".del-class")?.addEventListener("click",()=>{pendingDeleteClass=sid;renderClassAdmin();});
+    d.querySelector(".del-no")?.addEventListener("click",()=>{pendingDeleteClass=null;renderClassAdmin();});
+    d.querySelector(".del-yes")?.addEventListener("click",async()=>{pendingDeleteClass=null;try{await api("deleteClass",{id:sid}); toast("Class deleted"); await refresh();}catch(e){handleWriteError(e);}});
+    d.querySelectorAll("select.progsel").forEach(el=>el.addEventListener("change",()=>{const x=students.find(s=>s.id===el.closest("tr").dataset.id);x.program=el.value;api("updateStudent",{id:x.id,program:el.value}).then(()=>toast("Program saved")).catch(handleWriteError);}));
+    d.querySelectorAll("button.rm").forEach(b=>b.addEventListener("click",async()=>{const id=b.closest("tr").dataset.id;try{await api("removeStudent",{id});students=students.filter(x=>x.id!==id);toast("Student removed");renderAll();}catch(e){handleWriteError(e);}}));
+  });
+}
+const openAdmin=new Set();
+const strip=o=>{const {id,...r}=o;return r;};
+
+/* ---------- RESULTS ---------- */
+function compute(prog,term){
+  const sec=Object.fromEntries(sections.map(s=>[s.id,s])), out={};
+  for(const st of students){ const s=sec[st.sectionId]; if(!s||st.program!==prog||(term&&s.term!==term)) continue;
+    for(const o of objsFor(s.course,prog)) RUBRIC[o].traits.forEach((t,i)=>{const v=(st.scores||{})[key(o,i)]; if(!v) return;
+      const r=(out[o]??={courses:new Set(),traits:RUBRIC[o].traits.map(()=>({n:0,meet:0,sum:0,d:[0,0,0,0,0]}))});
+      r.courses.add(s.course+" "+s.section); const T=r.traits[i]; T.n++; T.sum+=v; T.d[v-1]++; if(v>=MEET) T.meet++; }); }
+  return out;
+}
+function renderResults(){
+  if(!isAdmin) return;
+  const prog=$("#rf-program").value, term=$("#rf-term").value, res=compute(prog,term);
+  const objs=Object.keys(RUBRIC).filter(o=>Object.values(COURSES).some(c=>(c[prog]||[]).includes(o))).sort();
+  $("#results").innerHTML=`<div class="res">${objs.map(o=>{const R=RUBRIC[o], r=res[o];
+    if(!r) return `<div class="panel objcard"><div class="objhead"><h2>${o} · ${esc(R.goal)} <span class="muted small">${esc(R.plo)}</span></h2><span class="pill warn">No scores yet</span></div><p class="small muted" style="margin:0">${esc(R.text)}</p></div>`;
+    const allMet=r.traits.every(T=>T.n&&T.meet/T.n>=TARGET);
+    const text=R.traits.map((t,i)=>{const T=r.traits[i];return `${t.name}: ${pct(T.meet,T.n)}% (${T.meet} out of ${T.n}) meet or exceed expectations`;}).join("\n");
+    return `<div class="panel objcard"><div class="objhead"><h2>${o} · ${esc(R.goal)} <span class="muted small">${esc(R.plo)}</span></h2><span class="pill ${allMet?'good':'bad'}">${allMet?'Target met on all traits':'Target not met on every trait'}</span></div>
+      <p class="small" style="margin:0">${esc(R.text)}</p><p class="small muted" style="margin:0">Scored in: ${[...r.courses].sort().map(esc).join(", ")}</p>
+      <div class="scroller"><table><thead><tr><th>Trait</th><th>Scored</th><th>Meet or exceed (3 to 5)</th><th>%</th><th>Mean</th><th>Distribution 1 to 5</th><th>Target 80%</th></tr></thead><tbody>
+      ${R.traits.map((t,i)=>{const T=r.traits[i],p=pct(T.meet,T.n);return `<tr><td>${esc(t.name)}</td><td>${T.n}</td><td>${T.meet}</td><td><b>${p}%</b></td><td>${T.n?(T.sum/T.n).toFixed(2):"-"}</td><td><div class="dist" title="${T.d.map((c,j)=>`${j+1}: ${c}`).join(', ')}">${T.d.map((c,j)=>c?`<span style="width:${c/T.n*100}%;background:var(--s${j+1})"></span>`:"").join("")}</div></td><td><span class="pill ${p>=80?'good':'bad'}">${p>=80?'Met':'Not met'}</span></td></tr>`;}).join("")}
+      </tbody></table></div>
+      <div class="row" style="justify-content:space-between"><span class="small muted">Results text for Table 5-1</span><button class="btn copy" data-text="${esc(text)}">Copy</button></div><div class="copybox">${esc(text)}</div></div>`;}).join("")}</div>`;
+  $("#results").querySelectorAll("button.copy").forEach(b=>b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(b.dataset.text);toast("Copied");}catch(e){const box=b.parentElement.nextElementSibling,rg=document.createRange();rg.selectNodeContents(box);const sel=getSelection();sel.removeAllRanges();sel.addRange(rg);toast("Selected. Press Ctrl+C or Cmd+C to copy.");}}));
+  $("#progress").innerHTML=sections.length?sections.slice().sort((a,b)=>(a.course+a.section).localeCompare(b.course+b.section)).map(s=>{const st=studentsOf(s.id),d=st.filter(x=>isComplete(x,s.course)).length;return `<tr><td>${esc(s.course)}</td><td>${esc(s.section)}</td><td>${esc(s.faculty)}</td><td>${esc(s.term)}</td><td>${st.length}</td><td><span class="pill ${st.length&&d===st.length?'good':'warn'}">${d} of ${st.length}</span></td><td><button class="btn link cs" data-id="${esc(s.id)}">Class sheet</button><button class="btn link ev" data-id="${esc(s.id)}">Individual sheets</button></td></tr>`;}).join(""):`<tr><td colspan="7" class="muted">No classes yet.</td></tr>`;
+  $("#progress").querySelectorAll("button.cs").forEach(b=>b.addEventListener("click",()=>downloadClassSheet(sections.find(s=>s.id===b.dataset.id))));
+  $("#progress").querySelectorAll("button.ev").forEach(b=>b.addEventListener("click",()=>downloadEvidence(sections.find(s=>s.id===b.dataset.id))));
+}
+$("#rf-program").addEventListener("change",renderResults); $("#rf-term").addEventListener("change",renderResults);
+
+/* ---------- downloads ---------- */
+const csvCell=v=>{const s=String(v??"");return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+function saveFile(filename,data){
+  const type=filename.endsWith(".csv")?"text/csv;charset=utf-8":"application/msword";
+  const url=URL.createObjectURL(new Blob([data],{type}));
+  const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+$("#dl-summary").addEventListener("click",()=>{
+  const term=$("#rf-term").value, rows=[["Program","Term filter","Objective","PLO","Competency goal","Trait","Students scored","Meet or exceed (3-5)","Percent","Mean","n1","n2","n3","n4","n5","Target 80% met"]];
+  for(const prog of ["MGT","MGTBAS"]){const res=compute(prog,term);for(const o of Object.keys(res).sort()){const R=RUBRIC[o];R.traits.forEach((t,i)=>{const T=res[o].traits[i];rows.push([PROGS[prog],term||"All",o,R.plo,R.goal,t.name,T.n,T.meet,pct(T.meet,T.n),T.n?(T.sum/T.n).toFixed(2):"",...T.d,T.n&&T.meet/T.n>=TARGET?"Yes":"No"]);});}}
+  saveFile("AoL_Table51_summary.csv","﻿"+rows.map(r=>r.map(csvCell).join(",")).join("\r\n"));
+});
+$("#dl-raw").addEventListener("click",()=>{
+  const sec=Object.fromEntries(sections.map(s=>[s.id,s])), rows=[["Course","Section","Term","Faculty","Student ID","Student name","Program","Objective","Trait","Score","Meets (3+)"]];
+  for(const st of students){const s=sec[st.sectionId];if(!s)continue;for(const o of objsFor(s.course,st.program))RUBRIC[o].traits.forEach((t,i)=>{const v=(st.scores||{})[key(o,i)];rows.push([s.course,s.section,s.term,s.faculty,st.idNo,st.name,PROGS[st.program],o,t.name,v??"",v?(v>=MEET?"Yes":"No"):""]);});}
+  saveFile("AoL_all_scores.csv","﻿"+rows.map(r=>r.map(csvCell).join(",")).join("\r\n"));
+});
+function downloadEvidence(s,onlyId){
+  const st=studentsOf(s.id).filter(x=>!onlyId||x.id===onlyId);
+  const fmt=d=>d?new Date(d).toLocaleString("en-PH",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Manila"}):"";
+  const pages=st.map((x,idx)=>{const objs=objsFor(s.course,x.program),sc=x.scores||{};
+    const rows=objs.map(o=>RUBRIC[o].traits.map((t,i)=>{const v=sc[key(o,i)],L=v?lvl(v):null,desc=L?(L.use?t[L.use]:L.txt):"Not scored";
+      return `<tr><td>${o}</td><td>${esc(t.name)}</td><td style="text-align:center"><b>${v??"-"}</b></td><td>${L?esc(L.name):"Not scored"}</td><td>${esc(desc)}</td><td style="text-align:center">${v?(v>=MEET?"Yes":"No"):"-"}</td></tr>`;}).join("")).join("");
+    return `<div style="${idx?'page-break-before:always;':''}"><p style="font-size:9pt;color:#555;margin:0">Ramon V. del Rosario College of Business, De La Salle University · AACSB Assurance of Learning</p><h2 style="margin:4pt 0">Individual Rubric Score Sheet</h2>
+      <table class="meta"><tr><td><b>Student</b></td><td>${esc(x.name)}</td><td><b>ID number</b></td><td>${esc(x.idNo)}</td></tr><tr><td><b>Program</b></td><td>${PROGS[x.program]}</td><td><b>Course and section</b></td><td>${esc(s.course)} ${esc(s.section)}</td></tr><tr><td><b>Term</b></td><td>${esc(s.term)}</td><td><b>Rater</b></td><td>${esc(s.faculty)}</td></tr><tr><td><b>Artifact assessed</b></td><td colspan="3">${esc(COURSES[s.course].artifact)}</td></tr><tr><td><b>Last scored</b></td><td colspan="3">${esc(fmt(x.updatedAt))}</td></tr></table>
+      ${objs.map(o=>`<p style="margin:2pt 0"><b>${o} (${esc(RUBRIC[o].plo)}) ${esc(RUBRIC[o].goal)}:</b> ${esc(RUBRIC[o].text)}</p>`).join("")}
+      <table class="sc"><tr><th>Obj.</th><th>Trait</th><th>Score (1-5)</th><th>Level</th><th>Descriptor met</th><th>Meets or exceeds (3+)</th></tr>${rows}</table>
+      <p style="font-size:9pt;margin-top:6pt">Scale: 5 Exceeds, 4 Above, 3 Meets, 2 Approaching, 1 Below expectations. Target: 80% of students score 3 or higher on each trait.</p><p style="margin-top:18pt">Rater signature: ______________________________ &nbsp;&nbsp; Date: ______________</p></div>`;}).join("");
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(s.course)} ${esc(s.section)} rubric sheets</title><style>@page{size:A4;margin:2cm}body{font-family:Calibri,Arial,sans-serif;font-size:10.5pt}table{border-collapse:collapse;width:100%;margin:6pt 0}td,th{border:1px solid #888;padding:3pt 5pt;vertical-align:top;font-size:9.5pt}th{background:#E3F0E8}</style></head><body>${pages}</body></html>`;
+  const one=onlyId?st[0]:null;
+  saveFile(`${s.course}_${s.section}_${s.term.replace(/[^0-9A-Za-z]+/g,"")}_${one?one.idNo+"_rubric_sheet":"AoL_rubric_sheets"}.doc`,"\ufeff"+html);
+}
+function downloadClassSheet(s){
+  const st=studentsOf(s.id), objs=courseObjs(s.course), cols=[];
+  objs.forEach(o=>RUBRIC[o].traits.forEach((t,i)=>cols.push({o,i,t})));
+  const body=st.map((x,n)=>{const ap=objsFor(s.course,x.program),sc=x.scores||{};
+    return `<tr><td>${n+1}</td><td>${esc(x.idNo)}</td><td>${esc(x.name)}</td><td>${PROGS[x.program]}</td>${cols.map(c=>{if(!ap.includes(c.o))return '<td style="text-align:center;color:#888">n/a</td>';const v=sc[key(c.o,c.i)];return `<td style="text-align:center">${v??""}</td>`;}).join("")}</tr>`;}).join("");
+  const sum=cols.map(c=>{let n=0,m=0;st.forEach(x=>{const v=(x.scores||{})[key(c.o,c.i)];if(v){n++;if(v>=MEET)m++;}});return {n,m};});
+  const foot=`<tr><td colspan="4"><b>Students scored</b></td>${sum.map(z=>`<td style="text-align:center">${z.n}</td>`).join("")}</tr><tr><td colspan="4"><b>Meet or exceed (3 to 5)</b></td>${sum.map(z=>`<td style="text-align:center">${z.m}</td>`).join("")}</tr><tr><td colspan="4"><b>Percent meeting (target 80%)</b></td>${sum.map(z=>`<td style="text-align:center"><b>${z.n?pct(z.m,z.n)+"%":"-"}</b></td>`).join("")}</tr>`;
+  const legend=cols.map((c,k)=>`<tr><td>T${k+1}</td><td>${c.o}</td><td>${esc(RUBRIC[c.o].plo)}</td><td>${esc(c.t.name)}</td></tr>`).join("");
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(s.course)} ${esc(s.section)} scoring sheet</title><style>@page Section1{size:841.9pt 595.3pt;mso-page-orientation:landscape;margin:1.5cm}div.Section1{page:Section1}body{font-family:Calibri,Arial,sans-serif;font-size:10pt}table{border-collapse:collapse;width:100%;margin:6pt 0}td,th{border:1px solid #888;padding:2pt 4pt;font-size:9pt;vertical-align:top}th{background:#E3F0E8}</style></head><body><div class="Section1">
+    <p style="font-size:9pt;color:#555;margin:0">Ramon V. del Rosario College of Business, De La Salle University · AACSB Assurance of Learning</p>
+    <h2 style="margin:4pt 0">Class AoL Scoring Sheet: ${esc(s.course)} ${esc(s.section)}</h2>
+    <p style="margin:0">Term: ${esc(s.term)} · Rater: ${esc(s.faculty)} · Students: ${st.length}<br>Artifact: ${esc(COURSES[s.course].artifact)}</p>
+    <table><tr><th>#</th><th>ID number</th><th>Name</th><th>Program</th>${cols.map((c,k)=>`<th>T${k+1}<br>${c.o}</th>`).join("")}</tr>${body}${foot}</table>
+    <p style="margin:6pt 0 2pt"><b>Trait key</b></p><table style="width:auto"><tr><th>Col.</th><th>Obj.</th><th>PLO</th><th>Trait</th></tr>${legend}</table>
+    <p style="font-size:9pt">Scale: 5 Exceeds, 4 Above, 3 Meets, 2 Approaching, 1 Below expectations. A score of 3 or higher meets expectations.</p>
+    <p style="margin-top:16pt">Rater signature: ______________________________ &nbsp;&nbsp; Date: ______________</p></div></body></html>`;
+  saveFile(`${s.course}_${s.section}_${s.term.replace(/[^0-9A-Za-z]+/g,"")}_class_scoring_sheet.doc`,"﻿"+html);
+}
+
+/* ---------- boot ---------- */
+function renderAll(){ renderPickers(); renderScore(); if(!$("#view-results").hidden) renderResults(); if(!$("#view-classes").hidden) renderClassAdmin(); }
+function showLogin(){ $("#login").hidden=false; $("#tabs").hidden=true; ["score","results","classes","guide"].forEach(v=>$("#view-"+v).hidden=true); $("#signout").hidden=true; }
+async function refresh(){
+  const data=await api("load");
+  isAdmin=data.role==="admin";
+  sections=data.sections||[]; students=(data.students||[]).map(st=>{ const local=students.find(x=>x.id===st.id); const busy=Object.keys(scoreQ).some(q=>q.startsWith(st.id+"|")); return busy&&local?local:st; });
+  document.querySelectorAll("[data-admin]").forEach(el=>el.hidden=!isAdmin);
+  renderAll();
+}
+async function start(){
+  if(!API_URL || API_URL.startsWith("PASTE_")){ setStatus("Setup needed: paste the Apps Script web app URL into API_URL in index.html."); return; }
+  if(!accessCode){ showLogin(); return; }
+  setStatus("Loading classes...");
+  try{
+    await refresh(); setStatus("");
+    $("#login").hidden=true; $("#tabs").hidden=false; $("#signout").hidden=false;
+    if(!["results","classes","guide"].some(v=>!$("#view-"+v).hidden)) $("#view-score").hidden=false;
+  }catch(e){
+    if(e.code==="bad_key"){ store("aol-code",null); accessCode=""; $("#login-msg").textContent="That code is not valid."; showLogin(); setStatus(""); }
+    else if(e.code==="not_configured") setStatus("The score sheet is not set up yet: add ADMIN_KEY and SCORER_KEY under Script Properties in Apps Script.");
+    else if(e.code==="wrong_reply") setStatus("Google answered, but not with scores. Either the Apps Script deployment is still on the old code (in Apps Script: Deploy > Manage deployments > pencil > Version: New version > Deploy), or the web app needs a Google sign-in (set Who has access to Anyone, or open this page in Safari or Chrome while signed in to your DLSU Google account, not inside Messenger).");
+    else setStatus("Could not reach the score sheet. Open this page in Google Chrome while signed in to your DLSU Google account (@dlsu.edu.ph), then reload. It will not work inside Messenger, Facebook or other in-app browsers.");
+  }
+}
+$("#login").addEventListener("submit",e=>{ e.preventDefault(); accessCode=$("#code").value.trim(); store("aol-code",accessCode); $("#login-msg").textContent=""; start(); });
+$("#signout").addEventListener("click",()=>{ store("aol-code",null); accessCode=""; $("#code").value=""; showLogin(); });
+setInterval(()=>{ if(document.visibilityState==="visible" && accessCode && !pendingWrites && !$("#tabs").hidden) refresh().catch(()=>{}); },60000);
+window.addEventListener("beforeunload",e=>{ if(pendingWrites){ e.preventDefault(); e.returnValue=""; } });
+renderAll(); start();
+</script>
+</body>
+</html>
